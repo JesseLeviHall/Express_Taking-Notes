@@ -1,0 +1,21 @@
+{
+  "name": "notetaking",
+  "version": "1.0.0",
+  "description": "Practice Project Notes App",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "express.js",
+    "mongodb",
+    "passport.js"
+  ],
+  "author": "Jesse Hall",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.0",
+    "express": "^4.17.3"
+  }
+}
