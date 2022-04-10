@@ -10,7 +10,6 @@ const noteSchema = new Schema({
   },
   createDate: {
     type: Date,
-
     default: new Date(),
   },
   authorId: {

@@ -3,19 +3,41 @@ const NoteModel = require("./model");
 
 //get all the notes
 router.get("/", (req, res, next) => {
-  res.send("All the notes");
+  NoteModel.find()
+    .then((notes) => {
+      if (!notes) {
+        res.status(404).send("No notes are saved yet!");
+      } else {
+        res.json(notes);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("there was an error");
+    });
 });
 
 //get one note
 router.get("/:id", (req, res, next) => {
-  res.send("Get note by id");
+  NoteModel.findById(req.params.id)
+    .then((note) => {
+      if (!note) {
+        res.status(404).send("sorry, no note found");
+      } else {
+        res.json(note);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("there was an error");
+    });
 });
 
 //create a new note
-router.post("/", (req, res, next) => {
+router.post("/", inputValidation, (req, res, next) => {
   const newNote = new NoteModel({
-    title: "Welcome note",
-    body: "Note Body",
+    title: req.body.title,
+    body: req.body.body,
   });
   newNote
     .save()
@@ -28,7 +50,7 @@ router.post("/", (req, res, next) => {
     })
     .catch((err) => {
       console.log(err);
-      res.send("error occured");
+      res.send("there was an error");
     });
 });
 
@@ -39,7 +61,36 @@ router.put("/:id", (req, res, next) => {
 
 //erase a note
 router.delete("/", (req, res, next) => {
-  res.send("erase notes");
+  NoteModel.findOneAndRemove({ _id: req.params.id })
+    .then((results) => {
+      if (!results) {
+        res.status(404).send("sorry, no note found");
+      } else {
+        res.send("successfully deleted");
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("Error Happened");
+    });
 });
+
+function inputValidation(req, res, next) {
+  const { title, body } = req.body;
+  const missingFileds = [];
+  if (!title) {
+    missingFileds.push("title");
+  }
+  if (!body) {
+    missingFileds.push("body");
+  }
+  if (missingFileds.length) {
+    res
+      .status(400)
+      .send(`we're missing something: ${missingFileds.join(", ")}`);
+  } else {
+    next();
+  }
+}
 
 module.exports = router;
