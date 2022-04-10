@@ -56,14 +56,35 @@ router.post("/", inputValidation, (req, res, next) => {
 
 //update a note
 router.put("/:id", (req, res, next) => {
-  res.send("update");
+  const { title, body } = req.body;
+  const updateNote = {};
+
+  if (title) {
+    updateNote.title = title;
+  }
+  if (body) {
+    updateNote.body = body;
+  }
+
+  NoteModel.findOneAndUpdate({ _id: req.params.id }, updateNote, { new: true })
+    .then((note) => {
+      if (!note) {
+        res.status(404).send("sorry, no note found");
+      } else {
+        res.send(note);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("Error Happened");
+    });
 });
 
 //erase a note
-router.delete("/", (req, res, next) => {
+router.delete("/:id", (req, res, next) => {
   NoteModel.findOneAndRemove({ _id: req.params.id })
-    .then((results) => {
-      if (!results) {
+    .then((note) => {
+      if (!note) {
         res.status(404).send("sorry, no note found");
       } else {
         res.send("successfully deleted");
