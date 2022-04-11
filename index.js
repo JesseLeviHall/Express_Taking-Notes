@@ -7,7 +7,11 @@ const PORT = 4000;
 const noteRoutes = require("./notes/routes");
 const userRoutes = require("./users/routes");
 
-mongoose.connect("mongodb://localhost/notetaking");
+const { username, password } = process.env;
+
+mongoose.connect(
+  `mongodb+srv://${username}:${password}@cluster0.z9edb.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -15,5 +19,5 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/notes", noteRoutes);
 app.use("/users", userRoutes);
 app.listen(PORT, () => {
-  console.log(`The app is running on http://localhost:${PORT}`);
+  console.log(`The app is running`);
 });
