@@ -1,21 +1,44 @@
 const router = require("express").Router();
 const NoteModel = require("./model");
+const passport = require("passport");
+const BearerStrategy = require("passport-http-bearer");
+const UserModel = require("../users/model");
+
+passport.use(
+  new BearerStrategy(function (accessToken, done) {
+    UserModel.findOne({ accessToken })
+      .then((foundUser) => {
+        if (foundUser) {
+          return done(null, true);
+        } else {
+          return done(null, false);
+        }
+      })
+      .catch((err) => {
+        done(err);
+      });
+  })
+);
 
 //get all the notes
-router.get("/", (req, res, next) => {
-  NoteModel.find()
-    .then((notes) => {
-      if (!notes) {
-        res.status(404).send("No notes are saved yet!");
-      } else {
-        res.json(notes);
-      }
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send("there was an error");
-    });
-});
+router.get(
+  "/",
+  passport.authenticate("bearer", { session: false }),
+  (req, res, next) => {
+    NoteModel.find()
+      .then((notes) => {
+        if (!notes) {
+          res.status(404).send("No notes are saved yet!");
+        } else {
+          res.json(notes);
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.status(500).send("there was an error");
+      });
+  }
+);
 
 //get one note
 router.get("/:id", (req, res, next) => {
