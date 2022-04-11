@@ -1,44 +1,22 @@
 const router = require("express").Router();
 const NoteModel = require("./model");
-const passport = require("passport");
-const BearerStrategy = require("passport-http-bearer");
-const UserModel = require("../users/model");
-
-passport.use(
-  new BearerStrategy(function (accessToken, done) {
-    UserModel.findOne({ accessToken })
-      .then((foundUser) => {
-        if (foundUser) {
-          return done(null, true);
-        } else {
-          return done(null, false);
-        }
-      })
-      .catch((err) => {
-        done(err);
-      });
-  })
-);
+const passport = require("../auth");
 
 //get all the notes
-router.get(
-  "/",
-  passport.authenticate("bearer", { session: false }),
-  (req, res, next) => {
-    NoteModel.find()
-      .then((notes) => {
-        if (!notes) {
-          res.status(404).send("No notes are saved yet!");
-        } else {
-          res.json(notes);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        res.status(500).send("there was an error");
-      });
-  }
-);
+router.get("/", (req, res, next) => {
+  NoteModel.find()
+    .then((notes) => {
+      if (!notes) {
+        res.status(404).send("No notes are saved yet!");
+      } else {
+        res.json(notes);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("there was an error");
+    });
+});
 
 //get one note
 router.get("/:id", (req, res, next) => {
@@ -57,59 +35,78 @@ router.get("/:id", (req, res, next) => {
 });
 
 //create a new note
-router.post("/", inputValidation, (req, res, next) => {
-  const newNote = new NoteModel({
-    title: req.body.title,
-    body: req.body.body,
-  });
-  newNote
-    .save()
-    .then((document) => {
-      if (document) {
-        res.json(document);
-      } else {
-        res.send("unable to save document");
-      }
-    })
-    .catch((err) => {
-      console.log(err);
-      res.send("there was an error");
+router.post(
+  "/",
+  passport.authenticate("bearer", { session: false }),
+  inputValidation,
+  (req, res, next) => {
+    const newNote = new NoteModel({
+      title: req.body.title,
+      body: req.body.body,
+      authorId: req.user._id,
     });
-});
+    newNote
+      .save()
+      .then((document) => {
+        if (document) {
+          res.json(document);
+        } else {
+          res.send("unable to save document");
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.send("there was an error");
+      });
+  }
+);
 
 //update a note
-router.put("/:id", updateValidation, (req, res, next) => {
-  NoteModel.findOneAndUpdate({ _id: req.params.id }, req.updateNote, {
-    new: true,
-  })
-    .then((note) => {
-      if (!note) {
-        res.status(404).send("sorry, no note found");
-      } else {
-        res.send(note);
-      }
+router.put(
+  "/:id",
+  passport.authenticate("bearer", { session: false }),
+  updateValidation,
+  findNote,
+  isAuthor,
+  (req, res, next) => {
+    NoteModel.findOneAndUpdate({ _id: req.params.id }, req.updateNote, {
+      new: true,
     })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send("Error Happened");
-    });
-});
+      .then((note) => {
+        if (!note) {
+          res.status(404).send("sorry, no note found");
+        } else {
+          res.send(note);
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.status(500).send("Error Happened");
+      });
+  }
+);
 
 //erase a note
-router.delete("/:id", (req, res, next) => {
-  NoteModel.findOneAndRemove({ _id: req.params.id })
-    .then((note) => {
-      if (!note) {
-        res.status(404).send("sorry, no note found");
-      } else {
-        res.send("successfully deleted");
-      }
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send("Error Happened");
-    });
-});
+router.delete(
+  "/:id",
+  passport.authenticate("bearer", { session: false }),
+  findNote,
+  isAuthor,
+  (req, res, next) => {
+    NoteModel.findOneAndRemove({ _id: req.params.id })
+      .then((note) => {
+        if (!note) {
+          res.status(404).send("sorry, no note found");
+        } else {
+          res.send("successfully deleted");
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        res.status(500).send("there was an error");
+      });
+  }
+);
 
 function inputValidation(req, res, next) {
   const { title, body } = req.body;
@@ -141,6 +138,30 @@ function updateValidation(req, res, next) {
   }
   req.updateNote = updateNote;
   next();
+}
+
+function findNote(req, res, next) {
+  NoteModel.findById(req.params.id)
+    .then((note) => {
+      if (!note) {
+        res.satus(404).send("note not found");
+      } else {
+        req.note = note;
+        next();
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("there was an error");
+    });
+}
+
+function isAuthor(req, res, next) {
+  if (req.user._id.equals(req.note.authorId)) {
+    next();
+  } else {
+    res.status(401).send("action not authorized unless logged in");
+  }
 }
 
 module.exports = router;
