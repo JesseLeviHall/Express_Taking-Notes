@@ -1,10 +1,17 @@
 const router = require("express").Router();
 const UserModel = require("./model");
 const bcrypt = require("bcryptjs");
+const Chance = require("chance");
+const chance = new Chance();
 
-router.post("/login", (req, res, next) => {
-  res.send("Login");
-});
+router.post(
+  "/login",
+  loginInputValidation,
+  findUser,
+  checkPassword,
+  giveAccess,
+  (req, res, next) => {}
+);
 
 router.post(
   "/register",
@@ -103,6 +110,77 @@ function hashPassword(req, res, next) {
       }
     });
   });
+}
+
+function loginInputValidation(req, res, next) {
+  const { email, password } = req.body;
+  const missingFileds = [];
+  if (!email) {
+    missingFileds.push("email");
+  }
+  if (!password) {
+    missingFileds.push("password");
+  }
+
+  if (missingFileds.length) {
+    res
+      .status(400)
+      .send(`we're missing something: ${missingFileds.join(", ")}`);
+  } else {
+    next();
+  }
+}
+
+function findUser(req, res, next) {
+  const { email } = req.body;
+  UserModel.findOne({ email: email })
+    .then((user) => {
+      if (!user) {
+        res.status(400).send(`${email} is not a registered email`);
+      } else {
+        req.user = user;
+        next();
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("there was an error");
+    });
+}
+
+function checkPassword(req, res, next) {
+  const hashPassword = req.user.password;
+  const { password } = req.body;
+  bcrypt.compare(password, hashPassword, function (err, passwordCorrect) {
+    if (err) {
+      console.log(err);
+      res.status(500).send("there was an error");
+    } else {
+      if (passwordCorrect) {
+        next();
+      } else {
+        res.status(400).send("password incorrect");
+      }
+    }
+  });
+}
+
+function giveAccess(req, res, next) {
+  const accessToken = chance.guid();
+  req.user.accessToken = accessToken;
+  req.user
+    .save()
+    .then((result) => {
+      if (result) {
+        res.send(accessToken);
+      } else {
+        res.status(400).send("there was an error");
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("there was an error");
+    });
 }
 
 module.exports = router;
