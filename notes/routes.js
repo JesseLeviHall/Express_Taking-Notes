@@ -55,18 +55,10 @@ router.post("/", inputValidation, (req, res, next) => {
 });
 
 //update a note
-router.put("/:id", (req, res, next) => {
-  const { title, body } = req.body;
-  const updateNote = {};
-
-  if (title) {
-    updateNote.title = title;
-  }
-  if (body) {
-    updateNote.body = body;
-  }
-
-  NoteModel.findOneAndUpdate({ _id: req.params.id }, updateNote, { new: true })
+router.put("/:id", updateValidation, (req, res, next) => {
+  NoteModel.findOneAndUpdate({ _id: req.params.id }, req.updateNote, {
+    new: true,
+  })
     .then((note) => {
       if (!note) {
         res.status(404).send("sorry, no note found");
@@ -112,6 +104,20 @@ function inputValidation(req, res, next) {
   } else {
     next();
   }
+}
+
+function updateValidation(req, res, next) {
+  const { title, body } = req.body;
+  const updateNote = {};
+
+  if (title) {
+    updateNote.title = title;
+  }
+  if (body) {
+    updateNote.body = body;
+  }
+  req.updateNote = updateNote;
+  next();
 }
 
 module.exports = router;
